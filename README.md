@@ -34,6 +34,97 @@ git clone https://github.com/Kelushael/cli-remote && cd cli-remote
 sudo ./deploy.sh            # service on :8765; nginx proxy snippet printed
 ```
 
+---
+
+# V2 — Native Host Architecture
+
+V1 works like a terminal-native relay.
+
+V2 evolves this into a real installable remote-host platform:
+
+```text
+Website
+→ download installer
+→ install local host service
+→ desktop shortcut/app
+→ consent screen
+→ persistent host connection
+→ remote command/control
+```
+
+The browser itself never silently controls the terminal.
+The installed host becomes the trusted bridge.
+
+## V2 Goals
+
+- Windows `.exe` installer
+- macOS `.dmg` app
+- Debian/Ubuntu installer
+- Termux installer
+- Protocol launcher support (`cliremote://`)
+- Native background service/daemon
+- Tokenized session auth
+- Persistent reconnect
+- Clipboard-assisted onboarding
+- Optional PyInstaller packaging
+
+## Planned structure
+
+```text
+v2/
+├── host/
+│   ├── cli_remote_host.py
+│   ├── launcher.py
+│   └── consent_ui.py
+├── installers/
+│   ├── windows/
+│   ├── macos/
+│   ├── debian/
+│   └── termux/
+├── packaging/
+│   ├── pyinstaller/
+│   └── assets/
+└── web/
+    ├── onboarding/
+    └── protocol-launch/
+```
+
+## Example install flows
+
+### Windows
+
+```powershell
+irm https://raw.githubusercontent.com/Kelushael/cli-remote/main/v2/installers/windows/install.ps1 | iex
+```
+
+### macOS
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Kelushael/cli-remote/main/v2/installers/macos/install.sh | bash
+```
+
+### Debian
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Kelushael/cli-remote/main/v2/installers/debian/install.sh | bash
+```
+
+### Termux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/Kelushael/cli-remote/main/v2/installers/termux/install.sh | bash
+```
+
 ## Security
 
-The admin channel is **unauthenticated** — anyone who can reach `/ws/admin` can drive consented clients. Before exposing the relay publicly, gate it: `cli_admin.py` already sends `Authorization: Bearer <token>` if you pass a second arg (`python3 cli_admin.py <url> <token>`); add the matching check in `handle_admin` server-side.
+The admin channel is **unauthenticated** in V1 — anyone who can reach `/ws/admin` can drive consented clients.
+
+V2 is intended to add:
+
+- signed sessions
+- authenticated operators
+- host registration
+- explicit permission prompts
+- visible local execution logs
+- revocable trust
+- per-command approval modes
