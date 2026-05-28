@@ -2,10 +2,11 @@
 
 Consent-gated remote control, Chrome-Remote-Desktop style. A client hits **yes**, and from that moment an operator can run shell commands on that machine (and through them, operate software) — driven entirely from a terminal, with no web admin page and no need to visit the domain.
 
-Three parts:
-- **`server.py`** — a websocket relay (the public VPS). Pairs clients to operators.
-- **`cli-agent.py`** — runs on the machine to be controlled. Does nothing until the user types `yes`.
+Parts:
+- **`server.py`** — websocket relay (public VPS). Pairs clients to operators.
+- **`agent.py`** + **`client/`** — the downloadable client. Self-connects to the relay after consent; bundled into `static/cli-remote-client.zip` with one-click `build.bat` (Windows) / `build.command` (Mac).
 - **`cli_admin.py`** — the operator's terminal. Lists consented sessions, sends commands, prints output.
+- **`cli-agent.py`** — legacy browser-relay agent (kept; superseded by self-connecting `agent.py`).
 
 ## Admin from your CLI — the one command
 
@@ -18,14 +19,13 @@ python3 cli_admin.py wss://markyninox.com/ws/admin
 
 Then: `/sessions` to list, `/use <id>` to pick one, type any command, `/quit` to exit. With one consented client it auto-selects.
 
-## On the machine being controlled
+## On the machine being controlled — the download flow
 
-```bash
-pip install aiohttp
-python3 cli-agent.py        # type 'yes' to grant control
-```
+1. Visit the domain (e.g. `https://markyninox.com`) and click **DOWNLOAD**.
+2. Unzip, double-click **build.bat** (Windows) or **build.command** (Mac).
+3. Type **yes** at the consent prompt.
 
-…then open the relay page (e.g. `https://markyninox.com`) and click **CONNECT**. That CONNECT is the consent handshake — once they're in, they're in.
+It connects itself to the relay — no browser, no CONNECT button. Closing the window revokes control. The bundle is `static/cli-remote-client.zip`; rebuild it with `./pack.sh` after editing `agent.py` or the launchers.
 
 ## Stand up the relay
 
