@@ -1,0 +1,83 @@
+#!/usr/bin/env bash
+# Auto-fit local model server for the cli-remote orchestrator.
+# Measures RAM/VRAM/disk, picks the largest GGUF that fits, and serves it
+# OpenAI-compatible via llama.cpp. No Ollama. Prints the endpoint URL on stdout.
+#
+#   local-brain            ensure a model is up, print its URL (downloads first run)
+#   local-brain --plan     just show detected resources + chosen model, don't launch
+#
+# Port 8199 (kept off moonunit's 8181). Logs: ~/.local/state/local-brain.log
+set -uo pipefail
+PORT=8199
+URL="http://127.0.0.1:${PORT}/v1/chat/completions"
+LOG="$HOME/.local/state/local-brain.log"; mkdir -p "$(dirname "$LOG")"
+
+log(){ echo "$@" >&2; }
+
+# ---- detect resources (GB) ----
+if [ "$(uname)" = "Darwin" ]; then
+    ram=$(( $(sysctl -n hw.memsize) / 1073741824 ))
+else
+    ram=$(( $(awk '/MemTotal/{print $2}' /proc/meminfo) / 1048576 ))
+fi
+vram=0
+if command -v nvidia-smi >/dev/null 2>&1; then
+    vram=$(( $(nvidia-smi --query-gpu=memory.total --format=csv,noheader,nounits 2>/dev/null | head -1) / 1024 ))
+fi
+disk=$(df -P "$HOME" | awk 'NR==2{print int($4/1048576)}')   # free GB in $HOME
+
+# compute budget: prefer GPU if it has real headroom, else system RAM, minus OS reserve
+if [ "$vram" -ge 6 ]; then
+    budget=$(( vram - 2 )); accel="gpu (${vram}GB VRAM)"; gpu=1
+else
+    budget=$(( ram - 3 )); accel="cpu (${ram}GB RAM)"; gpu=0
+fi
+[ "$budget" -lt 1 ] && budget=1
+
+# ---- model tiers: repo:quant  need_gb(run)  dl_gb(download) ----
+REPOS=(  "Qwen/Qwen2.5-32B-Instruct-GGUF:q4_k_m" "Qwen/Qwen2.5-14B-Instruct-GGUF:q4_k_m" "Qwen/Qwen2.5-7B-Instruct-GGUF:q4_k_m" "Qwen/Qwen2.5-3B-Instruct-GGUF:q4_k_m" "Qwen/Qwen2.5-1.5B-Instruct-GGUF:q4_k_m" "Qwen/Qwen2.5-0.5B-Instruct-GGUF:q4_k_m" )
+NEED=(   22 11 7 4 3 2 )
+DL=(     20 9  5 2 1 1 )
+
+pick=""; pick_dl=0
+for i in "${!REPOS[@]}"; do
+    if [ "$budget" -ge "${NEED[$i]}" ] && [ "$disk" -ge "${DL[$i]}" ]; then
+        pick="${REPOS[$i]}"; pick_dl="${DL[$i]}"; pick_need="${NEED[$i]}"; break
+    fi
+done
+
+log "── local-brain ──"
+log "accel:  $accel"
+log "disk:   ${disk}GB free in \$HOME"
+log "budget: ${budget}GB compute"
+if [ -z "$pick" ]; then
+    log "nothing fits (need >=2GB compute and >=1GB disk). Free space or use the remote model."
+    exit 1
+fi
+log "chosen: $pick   (~${pick_dl}GB download, ~${pick_need}GB to run)"
+
+[ "${1:-}" = "--plan" ] && { echo "$URL"; exit 0; }
+
+# ---- need llama.cpp ----
+if ! command -v llama-server >/dev/null 2>&1; then
+    log "llama-server not found. Install: brew install llama.cpp  |  winget install llama.cpp  |  build from ggml-org/llama.cpp"
+    exit 2
+fi
+
+# ---- already serving? ----
+if curl -sf "http://127.0.0.1:${PORT}/v1/models" >/dev/null 2>&1; then
+    log "model already serving on :${PORT}"
+    echo "$URL"; exit 0
+fi
+
+# ---- launch ----
+NGL=(); [ "$gpu" = 1 ] && NGL=(-ngl 99)
+log "starting llama-server (first run downloads the GGUF — watch $LOG)…"
+nohup llama-server -hf "$pick" --host 127.0.0.1 --port "$PORT" --ctx-size 8192 "${NGL[@]}" >"$LOG" 2>&1 &
+
+for _ in $(seq 1 240); do
+    curl -sf "http://127.0.0.1:${PORT}/v1/models" >/dev/null 2>&1 && { log "model up on :${PORT}"; echo "$URL"; exit 0; }
+    sleep 2
+done
+log "model did not come up in time — see $LOG"
+exit 3
