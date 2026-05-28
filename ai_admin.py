@@ -37,7 +37,7 @@ Reply with EXACTLY one line, one of:
 
 Rules:
 - One command per RUN, no explanation around it.
-- The target may be macOS or Linux — run `uname` first if it matters.
+- FIRST detect the OS: `RUN: uname -a`. If that errors, the target is Windows cmd.exe — switch to Windows syntax (dir, ver, whoami, wmic, `powershell -Command "..."`), chain with `&&` or separate RUN steps, and NEVER use bash `;`, `$()`, or unix tools there. On macOS/Linux use bash.
 - Diagnose before you mutate. Never run destructive commands without first inspecting.
 - Quote paths with spaces. When the goal is met, reply DONE."""
 
