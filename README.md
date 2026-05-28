@@ -19,6 +19,18 @@ python3 cli_admin.py wss://markyninox.com/ws/admin
 
 Then: `/sessions` to list, `/use <id>` to pick one, type any command, `/quit` to exit. With one consented client it auto-selects.
 
+## AI admin — talk, don't type commands
+
+`ai_admin.py` puts an LLM on the admin side. You give goals in natural language; the model drives the consented remote shell command-by-command, reads each output, and iterates until done — no pasting, no middleman.
+
+```bash
+pip install aiohttp
+python3 ai_admin.py ws://2.24.201.163:8765/ws/admin     # by IP now
+python3 ai_admin.py wss://markyninox.com/ws/admin        # once TLS is up
+```
+
+Then just say what you want: *"clean up his disk and fix whatever's wrong with his CLI."* Defaults to the sovereign Qwen node; override with `MODEL_URL` / `MODEL_KEY` / `MODEL_NAME`. Destructive commands prompt for confirmation unless `AUTO=1`.
+
 ## On the machine being controlled — the download flow
 
 1. Visit the domain (e.g. `https://markyninox.com`) and click **DOWNLOAD**.
