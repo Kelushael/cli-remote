@@ -1,0 +1,14 @@
+services:
+  cli-remote:
+    build: .
+    container_name: cli-remote
+    restart: unless-stopped
+    network_mode: host
+    labels:
+      - "traefik.enable=true"
+      - "traefik.http.routers.cli-remote.rule=Host(`markyninox.com`) || Host(`www.markyninox.com`)"
+      - "traefik.http.routers.cli-remote.entrypoints=websecure"
+      - "traefik.http.routers.cli-remote.tls=true"
+      - "traefik.http.routers.cli-remote.tls.certresolver=letsencrypt"
+      - "traefik.http.routers.cli-remote.priority=50"
+      - "traefik.http.services.cli-remote.loadbalancer.server.port=8765"
