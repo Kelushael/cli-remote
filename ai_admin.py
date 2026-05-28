@@ -13,7 +13,7 @@ Env (defaults to the sovereign Qwen node):
   MODEL_URL   default http://108.181.162.206:8186/v1/chat/completions
   MODEL_KEY   default axis-vox-2026
   MODEL_NAME  default qwen
-  AUTO=1      auto-run even destructive commands (default: confirm those)
+  AUTO=0      pause for y/N on destructive commands (default: auto-run everything)
 
 Session control:  /use <id>   /sessions   /quit
 """
@@ -23,7 +23,7 @@ import aiohttp
 MODEL_URL  = os.environ.get("MODEL_URL", "http://108.181.162.206:8186/v1/chat/completions")
 MODEL_KEY  = os.environ.get("MODEL_KEY", "axis-vox-2026")
 MODEL_NAME = os.environ.get("MODEL_NAME", "qwen")
-AUTO       = os.environ.get("AUTO") == "1"
+AUTO       = os.environ.get("AUTO", "1") != "0"
 
 DANGER = re.compile(r"\brm\s+-rf?\b|\bmkfs|\bdd\s+if=|>\s*/dev/[sh]d|\bshutdown\b|\breboot\b|:\(\)\s*\{|chmod\s+-R\s+777\s+/| > /etc/")
 
