@@ -48,10 +48,13 @@ async def handle_admin(request):
     return ws
 async def handle_index(r):return web.FileResponse("./static/client.html")
 async def handle_admin_page(r):return web.FileResponse("./static/admin.html")
+async def handle_carwash(r):return web.FileResponse("./static/carwash.html")
 app=web.Application()
 app.router.add_get("/",handle_index)
 app.router.add_get("/admin",handle_admin_page)
+app.router.add_get("/carwash",handle_carwash)
 app.router.add_get("/ws/client",handle_client)
 app.router.add_get("/ws/admin",handle_admin)
+app.router.add_static("/carwash/dl/","./static/carwash")
 app.router.add_static("/static/","./static")
 if __name__=="__main__":web.run_app(app,port=8765)
