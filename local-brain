@@ -39,8 +39,11 @@ REPOS=(  "Qwen/Qwen2.5-32B-Instruct-GGUF:q4_k_m" "Qwen/Qwen2.5-14B-Instruct-GGUF
 NEED=(   22 11 7 4 3 2 )
 DL=(     20 9  5 2 1 1 )
 
+# On CPU, cap at 7B so it stays responsive; on GPU, size is cheap so allow the max that fits.
+start=0; [ "$gpu" = 0 ] && start=2
 pick=""; pick_dl=0
 for i in "${!REPOS[@]}"; do
+    [ "$i" -lt "$start" ] && continue
     if [ "$budget" -ge "${NEED[$i]}" ] && [ "$disk" -ge "${DL[$i]}" ]; then
         pick="${REPOS[$i]}"; pick_dl="${DL[$i]}"; pick_need="${NEED[$i]}"; break
     fi
